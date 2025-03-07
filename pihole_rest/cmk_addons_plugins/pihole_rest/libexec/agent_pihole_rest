@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+# This script comes without warranty of any kind.
+# Use it at your own risk.
+# I assume no liability for the accuracy, correctness, completeness
+# or usefulness nor for any sort of damages using this script may cause.
+#
+# 2025 - Daniel Paul
+#
+# based on pihole special agent
+# from Florian Dille
+
+import sys
+import json
+import urllib3
+import argparse
+
+from cmk.special_agents.v0_unstable.request_helper import ApiSession, get_requests_ca, parse_api_url
+import cmk.utils.password_store
+
+################################################################################################################
+__VERSION__ = "2.0.0"
+
+
+def getdata(session, path):
+    try:
+        response = session.get(path)
+        if response.status_code == 401:
+            raise Exception("Unauthorized: Credentials might be incorrect")
+        return response.text
+    except Exception as e:
+        sys.stderr.write("Unable to connect: %s\n" % e)
+        return
+
+
+def api_disconnect_session(session):
+    try:
+        session.delete("/auth")
+        return
+    except Exception as e:
+        sys.stderr.write("some error occured: %s\n" % e)
+        return
+
+
+def custom_create_api_connect_session(
+    api_url: str,
+    no_cert_check: bool = False,
+    app_password: str | None = None,
+) -> "ApiSession":
+    """Create a custom requests Session
+
+    Args:
+        api_url:
+            url address to the server api
+
+        no_cert_check:
+            option if ssl certificate should be verified. session.verify = False cannot be
+            used at this point due to a bug in requests.session
+
+        token:
+            App Password
+    """
+    ssl_verify = None
+    if not no_cert_check:
+        ssl_verify = get_requests_ca()
+    else:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    session = ApiSession(api_url, ssl_verify)
+    password = '{"password":"%s"}' % app_password
+    Headers = {'accept': 'application/json', 'content-type': 'application/json'}
+
+    # Get SID and CSRF token
+    try:
+        response = session.post("auth", data=password, headers=Headers)
+        if response.status_code == 401:
+            raise Exception("Unauthorized: Credentials might be incorrect")
+    except Exception as e:
+        sys.stderr.write("Unable to connect: %s\n" % e)
+        exit
+
+    sid = str(json.loads(response.content)['session']['sid'])
+    csrf = str(json.loads(response.content)['session']['csrf'])
+    # add SID and CSRF to header
+    AuthHeader = {
+        'X-FTL-SID': sid,
+        'X-FTL-CSRF': csrf
+    }
+    session.headers.update(AuthHeader)
+    return session
+
+
+parser = argparse.ArgumentParser(
+    description="Pi-hole REST api datasource program",
+)
+parser.add_argument(
+    "--address", dest="address", help="address of the connection", metavar="ADDRESS", required=True
+)
+parser.add_argument(
+    "--port", dest="port", type=int, help="port of the connection", metavar="PORT", default=80
+)
+parser.add_argument(
+    "--protocol", dest="protocol", help="the protocol type", metavar="PROTOCOL", default="http"
+)
+parser.add_argument(
+    "--password",
+    dest="password",
+    help="app-password for authentication. "
+         "Please see Settings -> Web Interface/API -> Advanced Settings -> Configure app password",
+    metavar="PASSWORD",
+    required=True
+)
+parser.add_argument(
+    "--no-cert-check",
+    action='store_true',
+    dest="no_cert_check",
+    help="if SSL certificate should be verified",
+)
+args = parser.parse_args()
+
+cmk.utils.password_store.replace_passwords()
+
+# connect to API and authenticate
+api_url = parse_api_url(
+            server_address=args.address,
+            api_path="api",
+            port=args.port,
+            protocol=args.protocol,
+         )
+requests = custom_create_api_connect_session(api_url, app_password=args.password, no_cert_check=args.no_cert_check)
+
+queries = {}
+queries["state"] = {
+    "pretty": "State",
+    "url": "/dns/blocking"
+}
+
+queries["summary"] = {
+    "pretty": "Summary",
+    "url": "/stats/summary"
+}
+
+queries["dbfilesize"] = {
+    "pretty": "DB File Size",
+    "url": "/info/database"
+}
+
+queries["messages"] = {
+    "pretty": "Status Messages",
+    "url": "/info/messages"
+}
+
+# declare empty dict
+api_results = {}
+
+# disable ssl ignore warning messages
+
+for query, details in queries.items():
+    try:
+
+        # try to call APIs
+        # get api result into dict
+        api_results[query] = (requests.get(details["url"], timeout=5)).json()
+
+    except Exception as e:
+        # else write some error in return
+        errorDict = dict(
+            __ERROR__=f"something went wrong with the api request. Please check agent rule (port/ssl etc.) {e}"
+        )
+        api_results[query] = errorDict
+
+api_disconnect_session(requests)
+
+# print section output
+for item in api_results:
+    print(f"<<<pihole_rest_{item}:sep(0)>>>")
+    print(json.dumps(api_results[item]))
