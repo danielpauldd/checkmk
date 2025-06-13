@@ -25,6 +25,7 @@ from cmk.server_side_calls.v1 import (
 
 class Params(BaseModel):
     """params validator"""
+    address: str | None = None
     protocol: tuple
     password: Secret | None = None
     port: int
@@ -35,16 +36,18 @@ def _agent_arguments(params: Params, host_config: HostConfig) -> Iterator[Specia
     # print(params)
     """build command line arguments"""
 
-    args: Sequence[str] = [
-        "--address",
-        host_config.primary_ip_config.address or host_config.name,
-        "--port",
-        str(params.port),
-        "--protocol",
-        params.protocol[0],
-        "--password",
-        params.password.unsafe("%s"),
-    ]
+    args: Sequence[str] = []
+    if params.address is not None:
+        args += ["--address", str(params.address)]
+    else:
+        if ((host_config.primary_ip_config.address is not None) and
+           (host_config.primary_ip_config.address != "0.0.0.0")):
+            args += ["--address", host_config.primary_ip_config.address]
+        else:
+            args += ["--address", host_config.name]
+    args += ["--port", str(params.port)]
+    args += ["--protocol", params.protocol[0]]
+    args += ["--password", params.password.unsafe("%s")]
 
     yield SpecialAgentCommand(command_arguments=args)
 

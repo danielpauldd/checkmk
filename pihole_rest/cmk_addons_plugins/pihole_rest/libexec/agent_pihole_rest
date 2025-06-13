@@ -71,24 +71,26 @@ def custom_create_api_connect_session(
     password = '{"password":"%s"}' % app_password
     Headers = {'accept': 'application/json', 'content-type': 'application/json'}
 
+    response = None
     # Get SID and CSRF token
     try:
         response = session.post("auth", data=password, headers=Headers)
         if response.status_code == 401:
             raise Exception("Unauthorized: Credentials might be incorrect")
     except Exception as e:
-        sys.stderr.write("Unable to connect: %s\n" % e)
-        exit
-
-    sid = str(json.loads(response.content)['session']['sid'])
-    csrf = str(json.loads(response.content)['session']['csrf'])
-    # add SID and CSRF to header
-    AuthHeader = {
-        'X-FTL-SID': sid,
-        'X-FTL-CSRF': csrf
-    }
-    session.headers.update(AuthHeader)
-    return session
+        raise Exception("Unable to connect: %s" % e)
+    #     sys.stderr.write("Unable to connect: %s\n" % e)
+    #     exit
+    if response:
+        sid = str(json.loads(response.content)['session']['sid'])
+        csrf = str(json.loads(response.content)['session']['csrf'])
+        # add SID and CSRF to header
+        AuthHeader = {
+            'X-FTL-SID': sid,
+            'X-FTL-CSRF': csrf
+        }
+        session.headers.update(AuthHeader)
+        return session
 
 
 parser = argparse.ArgumentParser(
