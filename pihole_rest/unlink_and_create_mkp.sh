@@ -5,6 +5,36 @@ YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
+# Default value for the variable onlyPack (0 = false)
+onlyPack=0
+
+
+# Function to display help
+show_help() {
+    echo "Usage: $0 [-p] [-h]"
+    echo "Options:"
+    echo "  -p    Sets the variable onlyPack to '0' (true)."
+    echo "  -h    Displays this help message and exits the script."
+    exit 0
+}
+
+
+# Parameter processing with getopts
+while getopts ":ph" opt; do
+    case $opt in
+        p)
+            onlyPack=1 # Set to true
+            ;;
+        h)
+            show_help
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            show_help
+            ;;
+    esac
+done
+
 # cd into the agent/check bundle directory and use relative paths
 if [[ $BASH_SOURCE = */* ]]; then
     baseDir=${BASH_SOURCE%/*}
@@ -31,23 +61,27 @@ for DirName in ${Plugins[*]}
         
         # test if there is already something installed
         DirNameLink="${OMD_ROOT}/local/lib/python3/cmk_addons/plugins/${DirNameShort}" 
-        if [ -L $DirNameLink ]; then
-            echo -e "remove symlink ${DirNameLink}"
-            rm $DirNameLink 2>/dev/null
-        # create symlink if no file exists
-        elif [ ! -d $DirNameLink ]; then
-            echo -e "${DirNameLink} was not there, nothing to do!"
-        else
-            echo -e "${RED}ERROR:${NC}: ${DirNameLink} is not a symlink. Abort."
-            break
-        fi
-        echo ""
-
-        # cleanup pycache files
-        find -name *.pyc -type f -exec rm {} \; 2>/dev/null
-        find -name __pycache__ -type d -exec rmdir {} \; 2>/dev/null
         
-        cp -r "$DirName/" "$DirNameLink"
+        # only relink the files when -p was not provided
+        if [ $onlyPack -ne 1 ]; then
+            if [ -L $DirNameLink ]; then
+                echo -e "remove symlink ${DirNameLink}"
+                rm $DirNameLink 2>/dev/null
+            # create symlink if no file exists
+            elif [ ! -d $DirNameLink ]; then
+                echo -e "${DirNameLink} was not there, nothing to do!"
+            else
+                echo -e "${RED}ERROR:${NC}: ${DirNameLink} is not a symlink. Abort."
+                break
+            fi
+            echo ""
+
+            # cleanup pycache files
+            find -name *.pyc -type f -exec rm {} \; 2>/dev/null
+            find -name __pycache__ -type d -exec rmdir {} \; 2>/dev/null
+
+            cp -r "$DirName/" "$DirNameLink"
+        fi
         if [ ! -e ${DirNameShort}.manifest.temp ]; then
             mkp template $DirNameShort
             vi ${OMD_ROOT}/tmp/check_mk/${DirNameShort}.manifest.temp
