@@ -16,11 +16,14 @@ import json
 import urllib3
 import argparse
 
-from cmk.special_agents.v0_unstable.request_helper import ApiSession, get_requests_ca, parse_api_url
+# Todo: Replace that shitty workaround for Checkmk 2.4
+# deliver a copy of the old requets_helper lib from Checkmk 2.3  with this special agent
+
+from request_helper import ApiSession, get_requests_ca, parse_api_url
 import cmk.utils.password_store
 
 ################################################################################################################
-__VERSION__ = "2.0.0"
+__VERSION__ = "2.0.2"
 
 
 def getdata(session, path):
@@ -79,8 +82,7 @@ def custom_create_api_connect_session(
             raise Exception("Unauthorized: Credentials might be incorrect")
     except Exception as e:
         raise Exception("Unable to connect: %s" % e)
-    #     sys.stderr.write("Unable to connect: %s\n" % e)
-    #     exit
+
     if response:
         sid = str(json.loads(response.content)['session']['sid'])
         csrf = str(json.loads(response.content)['session']['csrf'])
