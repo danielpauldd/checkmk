@@ -11,8 +11,10 @@
 # based on pihole special agent
 # from Florian Dille
 
-
-from cmk.utils import debug
+try:
+    from cmk.utils import debug
+except ImportError:
+    from cmk.ccc import debug
 from pprint import pprint
 import itertools
 import json
