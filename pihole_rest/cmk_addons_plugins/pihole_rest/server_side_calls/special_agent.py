@@ -48,6 +48,8 @@ def _agent_arguments(params: Params, host_config: HostConfig) -> Iterator[Specia
     args += ["--port", str(params.port)]
     args += ["--protocol", params.protocol[0]]
     args += ["--password", params.password.unsafe("%s")]
+    if params.no_cert_check:
+        args += ["--no-cert-check"]
 
     yield SpecialAgentCommand(command_arguments=args)
 
