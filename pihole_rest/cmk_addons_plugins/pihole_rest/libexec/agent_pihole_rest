@@ -23,7 +23,7 @@ from request_helper import ApiSession, get_requests_ca, parse_api_url
 import cmk.utils.password_store
 
 ################################################################################################################
-__VERSION__ = "2.0.2"
+__VERSION__ = "2.0.4"
 
 
 def getdata(session, path):
@@ -153,6 +153,11 @@ queries["dbfilesize"] = {
 queries["messages"] = {
     "pretty": "Status Messages",
     "url": "/info/messages"
+}
+
+queries["version"] = {
+    "pretty": "Version",
+    "url": "/info/version"
 }
 
 # declare empty dict

@@ -200,7 +200,19 @@ def _formspec() -> Dictionary:
                         )
                     }
                 )
-            )
+            ),
+            "ignore_components": DictElement(
+                required=False,
+                parameter_form=List(
+                    title=Title("ignore version of component"),
+                    help_text=Help(
+                        "For all defined components, no version checks will be performed."
+                    ),
+                    element_template=String(),
+                    custom_validate=(validators.LengthInRange(min_value=1),),
+                ),
+                group=DictGroup()
+            ),
         },
     )
 
