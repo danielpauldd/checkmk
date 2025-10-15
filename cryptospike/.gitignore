@@ -1,0 +1,5 @@
+*.bak
+
+# keine Python cache Files
+__pycache__/
+*.cpython-*.pyc

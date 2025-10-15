@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+# This script comes without warranty of any kind.
+# Use it at your own risk.
+# I assume no liability for the accuracy, correctness, completeness
+# or usefulness nor for any sort of damages using this script may cause.
+#
+# 2025 - SHD System-Haus-Dresden GmbH - DPA
+
+import sys
+import requests
+import argparse
+import urllib3
+import json
+
+# import cmk.utils.password_store
+from cmk.utils import password_store
+from pathlib import Path
+
+__VERSION__ = "0.4.0"
+__URL_TEMPLATE = "https://{hostname}/api/v1/Server{query}"
+
+
+def _login(args, url_template):
+    url_auth = "/auth/login"
+    auth_payload = {
+        "username": args.username,
+        "password": args.password
+    }
+    response = None
+    try:
+        response = requests.post(
+            url_template.format(hostname=args.hostname, query=url_auth),
+            json=auth_payload,
+            headers={'Content-Type': 'application/json'},
+            verify=False if args.no_cert_check else True)
+        if response.status_code != 200:
+            raise Exception("no valid response received. HTTP status code was: %s" % response.status_code)
+        return json.loads(response.text).get('token')
+    except Exception as e:
+        sys.stderr.write("Unable to connect: %s\n" % e)
+        return None
+
+
+def _apiget(args, url_template, query, token=None):
+    response = None
+    headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['Authorization'] = "Bearer %s" % token
+    try:
+        response = requests.get(
+            url_template.format(hostname=args.hostname, query=query),
+            headers=headers,
+            verify=False if args.no_cert_check else True)
+        if args.debug:
+            print("\n%s\n\n" % response.url)
+        if response.status_code != 200:
+            raise Exception("no valid response received. HTTP status code was: %s" % response.status_code)
+        return response.json()
+    except Exception as e:
+        sys.stderr.write("Unable to connect: %s\n" % e)
+        return None
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Cryptospike api datasource program")
+    parser.add_argument("-H", "--hostname", dest="hostname", required=True,
+                        help="Hostname or IP address of Cryptospike Server", metavar="SERVERNAME")
+    parser.add_argument("-U", "--username", dest="username", required=False,
+                        help="username for authentication. ", metavar="USERNAME")
+    parser.add_argument("-P", "--password", dest="password", required=False,
+                        help="Password for authentication. ", metavar="PASSWORD")
+    parser.add_argument("--pwstore", dest="pwstore", required=False,
+                        help="Password for authentication from CMK Password Store", metavar="PASSWORD")
+    parser.add_argument("--no-cert-check", action='store_true',
+                        help="Disable verification of the servers ssl certificate")
+    parser.add_argument('--version', action='version', version=__VERSION__)
+    parser.add_argument("--debug", action='store_true', help=argparse.SUPPRESS)
+
+    args = parser.parse_args()
+    if (bool(args.username) != bool(args.password)) and (bool(args.username) != bool(args.pwstore)):
+        parser.error("Please define Username and Password.")
+    if (bool(args.password) == bool(args.pwstore)):
+        parser.error("Please define a password or pwstore, but not both.")
+    if args.no_cert_check:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    if args.pwstore:
+        pw_id, pw_path = args.pwstore.split(":")
+        args.password = password_store.lookup(Path(pw_path), pw_id)
+
+    __SERVICES = [
+        ("API Gateway", "/status"),
+        ("Admin", "/admin/status"),
+        ("Auth", "/auth/status"),
+        ("Notification", "/notification/status"),
+        ("Cluster", "/cluster/status"),
+        ("Central Config", "/config/status"),
+        ("Subscription", "/subscription/status"),
+        ("Resolver", "/resolver/status"),
+        ("Audit", "/audit/status"),
+        ("Analyzer", "/analyzer/status"),
+        ("File Event", "/file-event/status"),
+        ("LandscapeManager-Connector", "/lm-connector/status"),
+    ]
+
+    __QUERIES = [
+        ("blockedusers", "/audit/users?page=0&size=100&blocked=true&orderBy=EVENT_TIME&sortDescending=true"),
+        ("license", "/admin/license"),
+        ("version", "/admin/version-details"),
+        ("space", "/admin/status/df"),
+        ("landscape_tree", "/landscape/clusters/tree"),
+        ("landscape_assignments", "/landscape/assignments/clusters/status"),
+        # ("Cluster", "/cluster/clusters"),
+        # ("Servers", "/cluster/servers"),
+        # ("Volumes", "/cluster/volumes")
+    ]
+
+    print('<<<cryptospike_services:sep(0)>>>')
+    for service, query in __SERVICES:
+        data = None
+        data = _apiget(args, __URL_TEMPLATE, query)
+        if data:
+            print(json.dumps({'service': service, 'result': data}))
+
+    if args.username:
+        token = _login(args, __URL_TEMPLATE)
+        if not token:
+            exit(1)
+
+        for name, query in __QUERIES:
+            print("<<<cryptospike_%s:sep(0)>>>" % name)
+            data = None
+            data = _apiget(args, __URL_TEMPLATE, query, token)
+            if data:
+                print(json.dumps(data))
+
+        # Todo: Logout funktioniert noch nicht, bekomme immer ein 401 zurück
+        # data = _apiget(args, __URL_TEMPLATE, "/auth/logout")
+    exit(0)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
