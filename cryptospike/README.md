@@ -10,6 +10,11 @@ Datasource Program/Special Agent for monitoring ProLion Cryptospike 3.x
 
 ## Version History:
 
+### 1.1.0:
+
+- Support for Cryptospike 3.4.x and later
+- Blocked User Check also checks for quarantined users
+
 ### 1.0.0:
 
 - first release
