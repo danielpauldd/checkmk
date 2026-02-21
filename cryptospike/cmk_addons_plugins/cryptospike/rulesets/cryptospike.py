@@ -62,6 +62,18 @@ def _parameter_valuespec_cryptospike() -> Dictionary:
                     )
                 )
             ),
+            'quarantinedUserCount': DictElement(
+                parameter_form=SimpleLevels(
+                    title=Title('Quarantined User'),
+                    level_direction=LevelDirection.UPPER,
+                    form_spec_template=Integer(
+                        unit_symbol="quarantined users"
+                    ),
+                    prefill_fixed_levels=InputHint(
+                        value=(1, 1),
+                    )
+                )
+            ),
             'licensewarning': DictElement(
                 parameter_form=SimpleLevels(
                     title=Title('License Warning'),

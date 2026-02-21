@@ -35,6 +35,18 @@ metric_cryptospike_blockeduser = Metric(
     unit=UNIT_COUNT,
     color=Color.BLUE,
 )
+metric_cryptospike_quarantineduser = Metric(
+    name="quarantineduser",
+    title=Title("Quarantined Users"),
+    unit=UNIT_COUNT,
+    color=Color.YELLOW,
+)
+metric_cryptospike_activeuser = Metric(
+    name="activeuser",
+    title=Title("Active Users"),
+    unit=UNIT_COUNT,
+    color=Color.GREEN,
+)
 metric_cryptospike_totaluser = Metric(
     name="totaluser",
     title=Title("Total audited Users"),

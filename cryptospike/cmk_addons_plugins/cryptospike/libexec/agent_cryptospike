@@ -18,7 +18,7 @@ import json
 from cmk.utils import password_store
 from pathlib import Path
 
-__VERSION__ = "0.4.0"
+__VERSION__ = "0.5.0"
 __URL_TEMPLATE = "https://{hostname}/api/v1/Server{query}"
 
 
@@ -63,6 +63,13 @@ def _apiget(args, url_template, query, token=None):
         return None
 
 
+def parse_version(version_str):
+    parts = version_str.lstrip('v').split('.')
+    # Füllt die Liste mit Nullen auf, falls Teile fehlen
+    parts += ['0'] * (3 - len(parts))
+    return tuple(map(int, parts[:3]))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Cryptospike api datasource program")
     parser.add_argument("-H", "--hostname", dest="hostname", required=True,
@@ -105,18 +112,6 @@ def main(argv=None):
         ("LandscapeManager-Connector", "/lm-connector/status"),
     ]
 
-    __QUERIES = [
-        ("blockedusers", "/audit/users?page=0&size=100&blocked=true&orderBy=EVENT_TIME&sortDescending=true"),
-        ("license", "/admin/license"),
-        ("version", "/admin/version-details"),
-        ("space", "/admin/status/df"),
-        ("landscape_tree", "/landscape/clusters/tree"),
-        ("landscape_assignments", "/landscape/assignments/clusters/status"),
-        # ("Cluster", "/cluster/clusters"),
-        # ("Servers", "/cluster/servers"),
-        # ("Volumes", "/cluster/volumes")
-    ]
-
     print('<<<cryptospike_services:sep(0)>>>')
     for service, query in __SERVICES:
         data = None
@@ -129,6 +124,32 @@ def main(argv=None):
         if not token:
             exit(1)
 
+        # get version
+        data = _apiget(args, __URL_TEMPLATE, "/admin/version-details", token)
+        version = parse_version(data['version'])
+
+        if version < (3, 4, 0):
+            __QUERIES = [
+                ("blockedusers", "/audit/users?page=0&size=100&blocked=true&orderBy=EVENT_TIME&sortDescending=true")
+            ]
+        else:
+            __QUERIES = [
+                ("blockedusers", "/audit/users?page=0&size=100&blocked=true&quarantined=false&active=false&orderBy=EVENT_TIME&sortDescending=true"),  # noqa: E501
+                ("quarantinedusers", "/audit/users?page=0&size=100&blocked=false&quarantined=true&active=false&orderBy=EVENT_TIME&sortDescending=true"),  # noqa: E501
+                ("activeusers", "/audit/users?page=0&size=1&blocked=false&quarantined=false&active=true&orderBy=EVENT_TIME&sortDescending=true")  # noqa: E501
+            ]
+
+        __QUERIES += [
+            ("license", "/admin/license"),
+            ("version", "/admin/version-details"),
+            ("space", "/admin/status/df"),
+            ("landscape_tree", "/landscape/clusters/tree"),
+            ("landscape_assignments", "/landscape/assignments/clusters/status"),
+            # ("Cluster", "/cluster/clusters"),
+            # ("Servers", "/cluster/servers"),
+            # ("Volumes", "/cluster/volumes")
+        ]
+
         for name, query in __QUERIES:
             print("<<<cryptospike_%s:sep(0)>>>" % name)
             data = None
@@ -137,7 +158,7 @@ def main(argv=None):
                 print(json.dumps(data))
 
         # Todo: Logout funktioniert noch nicht, bekomme immer ein 401 zurück
-        # data = _apiget(args, __URL_TEMPLATE, "/auth/logout")
+        # data = _apiget(args, __URL_TEMPLATE, "/auth/logout", token)
     exit(0)
 
 
