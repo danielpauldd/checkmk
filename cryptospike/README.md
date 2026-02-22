@@ -10,6 +10,11 @@ Datasource Program/Special Agent for monitoring ProLion Cryptospike 3.x
 
 ## Version History:
 
+### 1.2.0:
+
+- Bugfix: Blocked User Check stürzt ab wenn keine Infos zu quarantined Users und/oder active Users vorhannden sind.
+- Warnmeldung wenn einer der überwachten Nodes nicht lizensiert ist (z.B. nach einem Controllertausch)
+
 ### 1.1.0:
 
 - Support for Cryptospike 3.4.x and later

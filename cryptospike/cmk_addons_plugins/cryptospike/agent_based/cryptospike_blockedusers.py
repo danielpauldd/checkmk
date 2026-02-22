@@ -78,16 +78,18 @@ def check_cryptospike_blockedusers(
     )
     yield metric
     yield result
-    result, metric = check_levels(
-        value=section_cryptospike_quarantinedusers['totalItems'],
-        label="Quarantined Users",
-        levels_upper=params.get("quarantinedUserCount"),
-        render_func=lambda value: f"{value:,d}",
-        metric_name='quarantineduser'
-    )
-    yield metric
-    yield result
-    yield Metric(name="activeuser", value=section_cryptospike_activeusers['totalItems'])
+    if section_cryptospike_quarantinedusers:
+        result, metric = check_levels(
+            value=section_cryptospike_quarantinedusers['totalItems'],
+            label="Quarantined Users",
+            levels_upper=params.get("quarantinedUserCount"),
+            render_func=lambda value: f"{value:,d}",
+            metric_name='quarantineduser'
+        )
+        yield metric
+        yield result
+    if section_cryptospike_quarantinedusers:
+        yield Metric(name="activeuser", value=section_cryptospike_activeusers['totalItems'])
     yield Metric(name="totaluser", value=section_cryptospike_blockedusers['totalUnfilteredItems'])
 
 

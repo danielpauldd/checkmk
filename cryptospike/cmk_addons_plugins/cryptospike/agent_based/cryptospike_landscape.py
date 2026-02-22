@@ -27,6 +27,10 @@ from cmk.agent_based.v2 import (
 from collections.abc import Mapping
 from typing import Any
 import json
+from .cryptospike_common import (
+    cryptospikeSection
+)
+
 
 #                                                          #
 #             Agent Sektion & Parser-Funktionen            #
@@ -50,6 +54,8 @@ agent_section_cryptospike_landscape = AgentSection(
     name="cryptospike_landscape_tree",
     parse_function=parse_cryptospike_landscape,
 )
+# agent_section_cryptospike_license = AgentSection(...)
+# is defined in cryptospike_license.py
 
 
 #                                                          #
@@ -57,9 +63,10 @@ agent_section_cryptospike_landscape = AgentSection(
 #                                                          #
 def discover_cryptospike_landscape(
     # params,
-    section: cryptospike_landscapeSection
+    section_cryptospike_landscape_tree: cryptospike_landscapeSection | None,
+    section_cryptospike_license: cryptospikeSection | None,
 ) -> DiscoveryResult:
-    for cluster, data in section.items():
+    for cluster, data in section_cryptospike_landscape_tree.items():
         yield Service(item=cluster)
 
 
@@ -69,18 +76,31 @@ def discover_cryptospike_landscape(
 def check_cryptospike_landscape(
     item: str,
     # params,
-    section: cryptospike_landscapeSection
+    section_cryptospike_landscape_tree: cryptospike_landscapeSection | None,
+    section_cryptospike_license: cryptospikeSection | None,
 ) -> CheckResult:
-    cluster = section[item]
+    cluster = section_cryptospike_landscape_tree[item]
     clusterName = cluster.get('name')
     clusterVersion = cluster.get('version')
     clusterNodes = cluster.get('nodes', [])
+    if section_cryptospike_license:
+        licensedNodes = section_cryptospike_license.get('nodes')
 
     infotext = "Cluster: %s (%s), %d Nodes" % (clusterName, clusterVersion, len(clusterNodes))
     details = infotext
+    state = State.OK
     for node in clusterNodes:
         details += "\nNode: %s (%s) - %s" % (node.get('name'), node.get('type'), node.get('licensedTopic'))
-    yield Result(state=State.OK, summary=infotext, details=details)
+        if section_cryptospike_license:
+            nodeSerial = node.get('licensedTopic')
+            licensedNodes = section_cryptospike_license.get('nodes')
+            # check if node is in list of licensedNodes
+            is_licensed = any(entry['sn'] == nodeSerial or entry['sn'] == '*' for entry in licensedNodes)
+            if not is_licensed:
+                nodeName = node.get('name')
+                state = State.WARN
+                infotext += ", Node %s (%s) is not licensed." % (nodeName, nodeSerial)
+    yield Result(state=state, summary=infotext, details=details)
 
     vServer = cluster.get('children', [])
 
@@ -95,7 +115,7 @@ def check_cryptospike_landscape(
 check_plugin_cryptospike_landscape = CheckPlugin(
     name="cryptospike_landscape",
     service_name="Cryptospike Cluster %s",
-    sections=["cryptospike_landscape_tree"],
+    sections=["cryptospike_landscape_tree", "cryptospike_license"],
     discovery_function=discover_cryptospike_landscape,
     # discovery_default_parameters={
     # },
