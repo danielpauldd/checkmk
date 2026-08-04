@@ -8,7 +8,7 @@ Datasource Program/Special Agent for monitoring ProLion Cryptospike 3.x and late
 - Monitoring of health status of storage server connection (*tested with NetApp Storage only*)
 - Monitoring of Cryptospike licence
 
-![Cryptospike Example](https://gitlab330.shd-online.de/DPA/images/-/raw/main/Checkmk/ProLion/Cryptospike/cryptospike.png?ref_type=heads)
+![Cryptospike Example](cryptospike.png)
 
 ## Version History:
 
