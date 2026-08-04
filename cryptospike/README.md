@@ -1,19 +1,25 @@
-# ProLion Cryptospike 3.x
+# cryptospike
 
-Datasource Program/Special Agent for monitoring ProLion Cryptospike 3.x
+## ProLion Cryptospike 3.x and later
+
+Datasource Program/Special Agent for monitoring ProLion Cryptospike 3.x and later
 - Monitoring of service status (possible without login details)
 - Monitoring of number of blocked users
 - Monitoring of health status of storage server connection (*tested with NetApp Storage only*)
 - Monitoring of Cryptospike licence
 
-![Screenshot of Cryptospike leader with active cryptospike special Agent](cryptospike.png)
+![Cryptospike Example](https://gitlab330.shd-online.de/DPA/images/-/raw/main/Checkmk/ProLion/Cryptospike/cryptospike.png?ref_type=heads)
 
 ## Version History:
+
+### 1.2.1:
+- Bug fix: Check crashed when not all CS Server are assigned to SVM (Thanks to Github User @Martin-85 for contributing the fix)
 
 ### 1.2.0:
 
 - Bug fix: Blocked User Check crashes if no information about quarantined users and/or active users is available.
 - Warning message if one of the monitored nodes is not licensed (e.g. after a controller replacement)
+
 
 ### 1.1.0:
 

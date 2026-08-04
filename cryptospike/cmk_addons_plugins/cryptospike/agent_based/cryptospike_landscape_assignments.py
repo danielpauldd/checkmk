@@ -103,8 +103,19 @@ def check_cryptospike_landscape_assignments(
     disconnected_good = []
     disconnected_bad = []
     for status in ipv4_statuses:
-        for node in status[status.get('ipv4')].keys():
-            connections = status[status.get('ipv4')][node]
+        if not isinstance(status, dict):
+            continue
+        # Some entries (for example unassigned "Server") contain no nested
+        # per-node details keyed by ipv4.
+        ipv4 = status.get('ipv4')
+        node_statuses = status.get(ipv4) if ipv4 else None
+        if not isinstance(node_statuses, dict):
+            continue
+
+        for connections in node_statuses.values():
+            if not isinstance(connections, list):
+                continue
+
             total += len(connections)
             connected += [conn for conn in connections if conn.get('connected')]
             disconnected_good += [conn for conn in connections if not conn.get('connected') and conn.get('disconnectedForGoodReason')]  # noqa: E501
