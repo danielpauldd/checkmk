@@ -166,7 +166,7 @@ check_plugin_pihole_rest_summary = CheckPlugin(
     sections=["pihole_rest_summary"],
     discovery_function=discover_pihole_rest_summary,
     check_ruleset_name="pihole_rest",
-    check_default_parameters={},
+    check_default_parameters={"dbfilesize": {}, "messages": {}},
     check_function=check_pihole_rest_summary,
 )
 
@@ -199,6 +199,6 @@ check_plugin_pihole_rest_gravity_update = CheckPlugin(
     sections=["pihole_rest_summary"],
     discovery_function=discover_pihole_rest_gravity_update,
     check_ruleset_name="pihole_rest",
-    check_default_parameters={},
+    check_default_parameters={"dbfilesize": {}, "messages": {}},
     check_function=check_pihole_rest_gravity_update,
 )
