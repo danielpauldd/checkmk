@@ -17,7 +17,7 @@
                                   'pihole_rest/server_side_calls/special_agent.py']},
  'name': 'pihole_rest',
  'title': 'Pi-hole v6.x',
- 'version': '2.0.6',
+ 'version': '2.0.7',
  'version.min_required': '2.3.0b1', 
  'version.packaged': 'cmk-mkp-tool 1.0.0',
  'version.usable_until': '3.1.0'}
