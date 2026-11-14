@@ -23,7 +23,7 @@ from request_helper import ApiSession, get_requests_ca, parse_api_url
 import cmk.utils.password_store
 
 ################################################################################################################
-__VERSION__ = "2.0.4"
+__VERSION__ = "2.0.7"
 
 
 def getdata(session, path):
