@@ -75,6 +75,6 @@ check_plugin_pihole_rest_version = CheckPlugin(
     sections=["pihole_rest_version"],
     discovery_function=discover_pihole_rest_version,
     check_ruleset_name="pihole_rest",
-    check_default_parameters={},
+    check_default_parameters={"dbfilesize": {}, "messages": {}},
     check_function=check_pihole_rest_version,
 )
